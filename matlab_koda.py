@@ -60,7 +60,7 @@ def enumerate_basins(M, resolution, neighbourhood="Moore"):
         structure = np.matrix('0 1 0; 1 1 1; 0 1 0')
     labeled_basins, n_components = label(basins, structure)
 
-    return labeled_basins, basins
+    return labeled_basins, n_components
 
 
 def enumerate_slopes(M, labeled_basins, resolution):
@@ -77,6 +77,24 @@ def enumerate_slopes(M, labeled_basins, resolution):
             find_paths_to_basins(M, labeled_basins, labeled_slopes, i, j, resolution)
 
     return labeled_slopes
+
+
+def enumerate_all_pareto_fronts(M, labeled_basins, resolution, n_components):
+    """ TODO """
+
+    pareto_fronts = np.zeros((resolution, resolution))
+
+    for c in range(n_components):
+        enumerate_pareto_front(M, labeled_basins, resolution, c + 1)
+
+    return pareto_fronts
+
+
+def enumerate_pareto_front(M, labeled_basins, resolution, component):
+    """ TODO """
+
+    ind_x, ind_y = np.where(labeled_basins == component)
+
 
 
 def is_local_min(M, x, y, neighbourhood, resolution):
@@ -106,12 +124,14 @@ def get_dominance_landscape_basins_from_matrix(M, x, y, neighbourhood):
         raise Exception('must be as many y grid labels as elements')
 
     #
-    labeled_basins, basins = enumerate_basins(M, resolution, neighbourhood)
+    labeled_basins, n_components = enumerate_basins(M, resolution, neighbourhood)
     labeled_slopes = enumerate_slopes(M, labeled_basins, resolution)
-    return labeled_basins, basins, labeled_slopes
+    labeled_pareto_front = enumerate_all_pareto_fronts(M, labeled_basins, resolution, n_components)
+
+    return labeled_pareto_front, labeled_basins, labeled_slopes
 
 
-def create_plot(M, labeled_basins, basins, labeled_slopes, x, y):
+def create_plot(M, labeled_pareto_front, labeled_basins, labeled_slopes, x, y):
     """ Create 2 plots:
     LEFT:
      - black: locally non-dominating regions
@@ -126,7 +146,7 @@ def create_plot(M, labeled_basins, basins, labeled_slopes, x, y):
     basins_only = np.ma.masked_where((0 >= labeled_basins), labeled_basins)
 
     # Set up plot
-    fig1, ax = plt.subplots(nrows=1, ncols=2, subplot_kw=dict(projection='3d'))
+    fig1, ax = plt.subplots(nrows=2, ncols=2, subplot_kw=dict(projection='3d'))
     X, Y = np.meshgrid(x, y)
     ax[0].plot_surface(X, Y, M[0, :, :], rstride=1, cstride=1, linewidth=1, antialiased=False, shade=True)
     ax[1].plot_surface(X, Y, M[1, :, :], rstride=1, cstride=1, linewidth=1, antialiased=False, shade=True)
@@ -154,10 +174,10 @@ def create_matrix(f1, f2, lim_x, lim_y, resolution):
             M[0, j, i] = f1(xx, yy)
             M[1, j, i] = f2(xx, yy)
 
-    labeled_basins, basins, labeled_slopes = \
+    labeled_pareto_front, labeled_basins, labeled_slopes = \
         get_dominance_landscape_basins_from_matrix(M, x, y, neighbourhood)
 
-    create_plot(M, labeled_basins, basins, labeled_slopes, x, y)
+    create_plot(M, labeled_pareto_front, labeled_basins, labeled_slopes, x, y)
 
 
 def main():
@@ -171,7 +191,7 @@ def main():
     limits_y = (-4, 4)
 
     start = time.time()
-    create_matrix(f1, f0, limits_x, limits_y, 401)
+    create_matrix(f1, f2, limits_x, limits_y, 401)
     end = time.time()
     print("elapsed time:", int(end - start), "s")
 
