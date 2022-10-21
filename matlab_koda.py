@@ -84,17 +84,36 @@ def enumerate_all_pareto_fronts(M, labeled_basins, resolution, n_components):
 
     pareto_fronts = np.zeros((resolution, resolution))
 
+    print(labeled_basins)
     for c in range(n_components):
-        enumerate_pareto_front(M, labeled_basins, resolution, c + 1)
+        print(c + 1)
+        enumerate_pareto_front(M, labeled_basins, pareto_fronts, c + 1)
 
     return pareto_fronts
 
 
-def enumerate_pareto_front(M, labeled_basins, resolution, component):
+def enumerate_pareto_front(M, labeled_basins, pareto_fronts, component):
     """ TODO """
 
     ind_x, ind_y = np.where(labeled_basins == component)
+    F = M[:, ind_x, ind_y]
+    values_indices_list = []
+    for vi in zip(F.T, ind_x, ind_y):
+        values_indices_list.append((vi[0], (vi[1], vi[2])))
 
+    pareto_list = []
+
+    values_indices_list = sorted(values_indices_list, key=lambda x: x[0][0])
+    for values, indices in values_indices_list:
+        is_dominated = False
+        for p_elem_values in pareto_list:
+            if np.all(p_elem_values < values):
+                is_dominated = True
+                break
+
+        if not is_dominated:
+            pareto_list.append(values)
+            pareto_fronts[indices[0], indices[1]] = component
 
 
 def is_local_min(M, x, y, neighbourhood, resolution):
@@ -137,27 +156,28 @@ def create_plot(M, labeled_pareto_front, labeled_basins, labeled_slopes, x, y):
      - black: locally non-dominating regions
      - gray: regions that lead to the same local optima region
      - white: regions that lead to different optima regions
-
     RIGHT: ...
     """
-    basins = (labeled_slopes > 0) + basins
 
-    slopes_only = np.ma.masked_where((0 >= labeled_slopes), labeled_slopes)
-    basins_only = np.ma.masked_where((0 >= labeled_basins), labeled_basins)
+    plot_pareto = np.ma.masked_where((0 >= labeled_pareto_front), labeled_pareto_front)
+    plot_basins = np.ma.masked_where((0 >= labeled_basins), labeled_basins)
+    plot_slopes = np.ma.masked_where((0 >= labeled_slopes), labeled_slopes)
 
     # Set up plot
-    fig1, ax = plt.subplots(nrows=2, ncols=2, subplot_kw=dict(projection='3d'))
-    X, Y = np.meshgrid(x, y)
-    ax[0].plot_surface(X, Y, M[0, :, :], rstride=1, cstride=1, linewidth=1, antialiased=False, shade=True)
-    ax[1].plot_surface(X, Y, M[1, :, :], rstride=1, cstride=1, linewidth=1, antialiased=False, shade=True)
-    plt.show()
 
+    fig, axs = plt.subplots(nrows=1, ncols=4, figsize=(20, 7))
+    axs[0].imshow(plot_pareto, interpolation='none', extent=(x[0], x[-1], y[0], y[-1]))
+    axs[1].imshow(plot_basins, interpolation='none', extent=(x[0], x[-1], y[0], y[-1]))
+    axs[2].imshow(plot_slopes, interpolation='none', extent=(x[0], x[-1], y[0], y[-1]))
 
-    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(14, 14))
-    axs[0].imshow(2 - basins, interpolation='none', cmap="gray", vmin=0, vmax=2,
-                  extent=(x[0], x[-1], y[0], y[-1]))
-    axs[1].imshow(slopes_only, alpha=0.3, interpolation='none', extent=(x[0], x[-1], y[0], y[-1]))
-    axs[1].imshow(basins_only, interpolation='none', extent=(x[0], x[-1], y[0], y[-1]))
+    axs[3].imshow(plot_slopes, alpha=0.2, interpolation='none', extent=(x[0], x[-1], y[0], y[-1]))
+    axs[3].imshow(plot_basins, alpha=0.5, interpolation='none', extent=(x[0], x[-1], y[0], y[-1]))
+    axs[3].imshow(plot_pareto, alpha=1.0, interpolation='none', extent=(x[0], x[-1], y[0], y[-1]))
+
+    axs[0].title.set_text('pareto front')
+    axs[1].title.set_text('basins')
+    axs[2].title.set_text('slopes')
+    axs[3].title.set_text('combined')
 
     plt.show()
 
@@ -187,16 +207,14 @@ def main():
                        (y ** 2 - 5 * math.cos(2 * math.pi * y)))
     f3 = lambda x, y: math.sin(x) + math.cos(y)
 
-    limits_x = (-4, 4)
-    limits_y = (-4, 4)
+    limits_x = (-5, 5)
+    limits_y = (-5, 5)
 
     start = time.time()
-    create_matrix(f1, f2, limits_x, limits_y, 401)
+    create_matrix(f1, f2, limits_x, limits_y, 500)
     end = time.time()
     print("elapsed time:", int(end - start), "s")
 
 
 if __name__ == '__main__':
     main()
-
-
