@@ -40,7 +40,7 @@ def find_paths_to_basins(M, labeled_basins, labeled_slopes, x, y, resolution):
         return 0
 
 
-def enumerate_basins(M, resolution, neighbourhood="Moore"):
+def enumerate_basins(M, resolution, neighbourhood):
     """ find all the locally dominance-neutral regions, where all local moves estimated at the
     discretization used are mutually non-dominating and enumerate each region with numbers,
     starting from 1, ...
@@ -80,7 +80,7 @@ def enumerate_slopes(M, labeled_basins, resolution):
 
 
 def enumerate_all_pareto_fronts(M, labeled_basins, resolution, n_components):
-    """ TODO """
+    """ return a resolution x resolution matrix, with enumerated pareto fronts for each basin """
 
     pareto_fronts = np.zeros((resolution, resolution))
 
@@ -93,7 +93,7 @@ def enumerate_all_pareto_fronts(M, labeled_basins, resolution, n_components):
 
 
 def enumerate_pareto_front(M, labeled_basins, pareto_fronts, component):
-    """ TODO """
+    """ enumerate pareto front of a connected component basin """
 
     ind_x, ind_y = np.where(labeled_basins == component)
     F = M[:, ind_x, ind_y]
@@ -130,7 +130,7 @@ def is_local_min(M, x, y, neighbourhood, resolution):
     return True
 
 
-def get_dominance_landscape_basins_from_matrix(M, x, y, neighbourhood):
+def get_dominance_landscape_basins_from_matrix(M, x, y, neighbourhood='Moore'):
     num_objectives, resolution, r = np.shape(M)
 
     if resolution != r:
@@ -142,7 +142,6 @@ def get_dominance_landscape_basins_from_matrix(M, x, y, neighbourhood):
     if len(y) != resolution:
         raise Exception('must be as many y grid labels as elements')
 
-    #
     labeled_basins, n_components = enumerate_basins(M, resolution, neighbourhood)
     labeled_slopes = enumerate_slopes(M, labeled_basins, resolution)
     labeled_pareto_front = enumerate_all_pareto_fronts(M, labeled_basins, resolution, n_components)
@@ -150,7 +149,7 @@ def get_dominance_landscape_basins_from_matrix(M, x, y, neighbourhood):
     return labeled_pareto_front, labeled_basins, labeled_slopes
 
 
-def create_plot(M, labeled_pareto_front, labeled_basins, labeled_slopes, x, y):
+def create_plot(labeled_pareto_front, labeled_basins, labeled_slopes, x, y):
     """ Create 2 plots:
     LEFT:
      - black: locally non-dominating regions
@@ -197,7 +196,7 @@ def create_matrix(f1, f2, lim_x, lim_y, resolution):
     labeled_pareto_front, labeled_basins, labeled_slopes = \
         get_dominance_landscape_basins_from_matrix(M, x, y, neighbourhood)
 
-    create_plot(M, labeled_pareto_front, labeled_basins, labeled_slopes, x, y)
+    create_plot(labeled_pareto_front, labeled_basins, labeled_slopes, x, y)
 
 
 def main():
